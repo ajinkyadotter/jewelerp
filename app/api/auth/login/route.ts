@@ -17,36 +17,33 @@ export async function POST(req: NextRequest) {
 
     const { email, password } = parsed.data
 
-    // Find user
     const { data: user, error } = await supabaseAdmin
       .from("users")
-      .select("*, organizations(id, name, slug)")
+      .select("*")
       .eq("email", email)
       .eq("is_active", true)
       .single()
 
     if (error || !user) return err("Invalid email or password", 401)
 
-    // Verify password
-    const valid = await verifyPassword(password, user.password_hash)
+    const userRecord = user as any
+    const valid = await verifyPassword(password, userRecord.password_hash)
     if (!valid) return err("Invalid email or password", 401)
 
-    // Sign JWT
     const token = await signToken({
-      id: user.id,
-      email: user.email,
-      name: `${user.first_name} ${user.last_name}`,
-      role: user.role as any,
-      org_id: user.org_id,
+      id: userRecord.id,
+      email: userRecord.email,
+      name: `${userRecord.first_name} ${userRecord.last_name}`,
+      role: userRecord.role,
+      org_id: userRecord.org_id,
     })
 
-    // Set cookie
-    const response = ok({ user: { id: user.id, email: user.email, name: `${user.first_name} ${user.last_name}`, role: user.role } })
+    const response = ok({ user: { id: userRecord.id, email: userRecord.email, name: `${userRecord.first_name} ${userRecord.last_name}`, role: userRecord.role } })
     response.cookies.set(COOKIE_NAME, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 7,
       path: "/",
     })
 
