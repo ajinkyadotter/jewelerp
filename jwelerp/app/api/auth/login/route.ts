@@ -1,0 +1,57 @@
+import { NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
+import { supabaseAdmin } from "@/lib/supabase"
+import { verifyPassword, signToken, COOKIE_NAME } from "@/lib/auth"
+import { ok, err } from "@/lib/api"
+
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+})
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json()
+    const parsed = loginSchema.safeParse(body)
+    if (!parsed.success) return err("Invalid email or password")
+
+    const { email, password } = parsed.data
+
+    // Find user
+    const { data: user, error } = await supabaseAdmin
+      .from("users")
+      .select("*, organizations(id, name, slug)")
+      .eq("email", email)
+      .eq("is_active", true)
+      .single()
+
+    if (error || !user) return err("Invalid email or password", 401)
+
+    // Verify password
+    const valid = await verifyPassword(password, user.password_hash)
+    if (!valid) return err("Invalid email or password", 401)
+
+    // Sign JWT
+    const token = await signToken({
+      id: user.id,
+      email: user.email,
+      name: `${user.first_name} ${user.last_name}`,
+      role: user.role as any,
+      org_id: user.org_id,
+    })
+
+    // Set cookie
+    const response = ok({ user: { id: user.id, email: user.email, name: `${user.first_name} ${user.last_name}`, role: user.role } })
+    response.cookies.set(COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: "/",
+    })
+
+    return response
+  } catch (e) {
+    return err("Server error", 500)
+  }
+}
