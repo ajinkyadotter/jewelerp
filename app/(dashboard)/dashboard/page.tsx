@@ -11,19 +11,18 @@ async function getDashboardData(orgId: string) {
     supabaseAdmin.from("invoices").select("*, customers(name)").eq("org_id", orgId).order("created_at", { ascending: false }).limit(5),
   ])
 
-  const invData = inventory.data ?? []
+  const invData: any[] = inventory.data ?? []
   const invTotal = invData.length
-  const available = invData.filter((i) => i.status === "AVAILABLE").length
-  const inventoryValue = invData.filter((i) => i.status === "AVAILABLE").reduce((s, i) => s + (i.final_price ?? 0), 0)
+  const available = invData.filter((i: any) => i.status === "AVAILABLE").length
+  const inventoryValue = invData.filter((i: any) => i.status === "AVAILABLE").reduce((s: number, i: any) => s + (i.final_price ?? 0), 0)
 
-  const allInvoices = invoices.data ?? []
+  const allInvoices: any[] = invoices.data ?? []
   const today = new Date().toISOString().split("T")[0]
-  const todaySales = allInvoices.filter((i) => i.created_at.startsWith(today)).reduce((s, i) => s + i.total_amount, 0)
-  const totalRevenue = allInvoices.reduce((s, i) => s + i.total_amount, 0)
+  const todaySales = allInvoices.filter((i: any) => i.created_at.startsWith(today)).reduce((s: number, i: any) => s + i.total_amount, 0)
+  const totalRevenue = allInvoices.reduce((s: number, i: any) => s + i.total_amount, 0)
 
-  // Monthly breakdown for chart
   const monthly: Record<string, number> = {}
-  allInvoices.forEach((inv) => {
+  allInvoices.forEach((inv: any) => {
     const m = inv.created_at.slice(0, 7)
     monthly[m] = (monthly[m] ?? 0) + inv.total_amount
   })
@@ -51,8 +50,6 @@ async function getDashboardData(orgId: string) {
 export default async function DashboardPage() {
   const user = await getAuthFromCookie()
   if (!user) return null
-
   const data = await getDashboardData(user.org_id)
-
   return <DashboardClient data={data} />
 }
