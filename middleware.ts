@@ -1,21 +1,18 @@
 import { NextRequest, NextResponse } from "next/server"
 
-const COOKIE_NAME = "jewelerp_session"
-
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   if (
     pathname.startsWith("/login") ||
-    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon")
   ) {
     return NextResponse.next()
   }
 
-  const token = req.cookies.get(COOKIE_NAME)?.value
-
+  const token = req.cookies.get("jewelerp_session")?.value
   if (!token) {
     return NextResponse.redirect(new URL("/login", req.url))
   }
