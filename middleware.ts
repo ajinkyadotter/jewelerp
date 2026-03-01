@@ -10,13 +10,10 @@ const COOKIE_NAME = "jewelerp_session"
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
-
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) return NextResponse.next()
   if (pathname.startsWith("/_next") || pathname.startsWith("/favicon")) return NextResponse.next()
-
   const token = req.cookies.get(COOKIE_NAME)?.value
   if (!token) return NextResponse.redirect(new URL("/login", req.url))
-
   try {
     const { payload } = await jwtVerify(token, secret)
     const requestHeaders = new Headers(req.headers)
